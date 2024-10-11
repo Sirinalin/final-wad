@@ -4,20 +4,27 @@ import { useForm } from "react-hook-form";
 import Link from "next/link";
 
 export default function Home() {
-  const APIBASE = process.env.NEXT_PUBLIC_API_URL;
+  const APIBASE = process.env.NEXT_PUBLIC_API_URL || '';
   const [categoryList, setCategoryList] = useState([]);
   const [editMode, setEditMode] = useState(false);
 
   const { register, handleSubmit, reset } = useForm();
 
   async function fetchCategory() {
-    const data = await fetch(`${APIBASE}/category`);
-    const c = await data.json();
-    const c2 = c.map((category) => {
-      category.id = category._id;
-      return category;
-    });
-    setCategoryList(c2);
+    try {
+      const data = await fetch(`${APIBASE}/api/category`);
+      if (!data.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      const c = await data.json();
+      const c2 = c.map((category) => {
+        category.id = category._id;
+        return category;
+      });
+      setCategoryList(c2);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
   }
 
   const startEdit = (category) => async () => {
@@ -28,12 +35,18 @@ export default function Home() {
   const deleteById = (id) => async () => {
     if (!confirm("Are you sure?")) return;
 
-    await fetch(`${APIBASE}/category/${id}`, {
-      method: "DELETE",
-    });
-    fetchCategory();
+    try {
+      const response = await fetch(`${APIBASE}/api/category/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete category');
+      }
+      fetchCategory();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
   }
-
 
   useEffect(() => {
     fetchCategory();
@@ -41,8 +54,7 @@ export default function Home() {
 
   function handleCategoryFormSubmit(data) {
     if (editMode) {
-      // data.id = data._id
-      fetch(`${APIBASE}/category`, {
+      fetch(`${APIBASE}/api/category`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -52,11 +64,11 @@ export default function Home() {
         reset({ name: '', order: '' })
         setEditMode(false)
         fetchCategory()
-      });
+      }).catch(error => console.error('Error updating category:', error));
       return
     }
 
-    fetch(`${APIBASE}/category`, {
+    fetch(`${APIBASE}/api/category`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -66,7 +78,7 @@ export default function Home() {
       reset({ name: '', order: '' })
       setEditMode(false)
       fetchCategory()
-    });
+    }).catch(error => console.error('Error adding category:', error));
   }
 
   return (

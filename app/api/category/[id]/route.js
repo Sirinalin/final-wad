@@ -8,6 +8,13 @@ export async function GET(request, { params }) {
 
 export async function DELETE(request, { params }) {
     const id = params.id;
-    const category = await Category.findByIdAndDelete(id)
-    return Response.json(category);
+    try {
+        const category = await Category.findByIdAndDelete(id)
+        if (!category) {
+            return Response.json({ error: "Category not found" }, { status: 404 });
+        }
+        return Response.json(category);
+    } catch (error) {
+        return Response.json({ error: error.message }, { status: 500 });
+    }
 }
