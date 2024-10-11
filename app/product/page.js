@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-  const APIBASE = process.env.NEXT_PUBLIC_API_URL;
+  const APIBASE = process.env.NEXT_PUBLIC_API_URL || '';
   const { register, handleSubmit, reset } = useForm();
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState([]);
@@ -16,25 +16,41 @@ export default function Home() {
   };
 
   async function fetchProducts() {
-    const data = await fetch(`${APIBASE}/product`);
-    const p = await data.json();
-    const p2 = p.map((product) => {
-      product.id = product._id;
-      return product;
-    });
-    setProducts(p2);
+    try {
+      const data = await fetch(`${APIBASE}/api/product`);
+      if (!data.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      const p = await data.json();
+      const p2 = p.map((product) => {
+        product.id = product._id;
+        return product;
+      });
+      setProducts(p2);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
   }
 
   async function fetchCategory() {
-    const data = await fetch(`${APIBASE}/category`);
-    const c = await data.json();
-    setCategory(c);
+    try {
+      const data = await fetch(`${APIBASE}/api/category`);
+      if (!data.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      const c = await data.json();
+      setCategory(c);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
   }
 
   const createProductOrUpdate = async (data) => {
-    if (editMode) {
-      const response = await fetch(`${APIBASE}/product`, {
-        method: "PUT",
+    try {
+      const url = editMode ? `${APIBASE}/api/product` : `${APIBASE}/api/product`;
+      const method = editMode ? "PUT" : "POST";
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -42,9 +58,10 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        alert(`Failed to update product: ${response.status}`);
+        throw new Error(`Failed to ${editMode ? 'update' : 'add'} product: ${response.status}`);
       }
-      alert("Product updated successfully");
+
+      alert(`Product ${editMode ? 'updated' : 'added'} successfully`);
       reset({
         code: "",
         name: "",
@@ -54,35 +71,8 @@ export default function Home() {
       });
       setEditMode(false);
       fetchProducts();
-      return;
-    }
-
-    const response = await fetch(`${APIBASE}/product`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    try {
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
-
-      // const json = await response.json();
-      alert("Product added successfully");
-
-      reset({
-        code: "",
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-      });
-      fetchProducts();
     } catch (error) {
-      alert(`Failed to add product: ${error.message}`);
+      alert(error.message);
       console.error(error);
     }
   };
@@ -90,15 +80,21 @@ export default function Home() {
   const deleteById = (id) => async () => {
     if (!confirm("Are you sure?")) return;
 
-    const response = await fetch(`${APIBASE}/product/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      const response = await fetch(`${APIBASE}/api/product/${id}`, {
+        method: "DELETE",
+      });
 
-    if (!response.ok) {
-      alert(`Failed to delete product: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Failed to delete product: ${response.status}`);
+      }
+
+      alert("Product deleted successfully");
+      fetchProducts();
+    } catch (error) {
+      alert(error.message);
+      console.error(error);
     }
-    alert("Product deleted successfully");
-    fetchProducts();
   };
 
   useEffect(() => {
